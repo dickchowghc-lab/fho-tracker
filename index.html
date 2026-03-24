@@ -1,0 +1,2594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FHO+ Hourly Rate Time Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
+            background: #f8f9fa;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            color: #5f6368;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .info-box {
+            background: #e8f0fe;
+            border-left: 4px solid #1a73e8;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #202124;
+        }
+
+        .info-box h3 {
+            color: #1a73e8;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+        }
+
+        .info-box li {
+            margin: 4px 0;
+        }
+
+        .rate-reference {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .rate-card {
+            background: white;
+            border-radius: 8px;
+            padding: 12px 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid;
+        }
+
+        .rate-card.direct-in { border-color: #34a853; }
+        .rate-card.direct-out { border-color: #fbbc04; }
+        .rate-card.indirect { border-color: #4285f4; }
+        .rate-card.admin { border-color: #ea4335; }
+
+        .rate-card h4 {
+            font-size: 12px;
+            color: #5f6368;
+            margin-bottom: 4px;
+        }
+
+        .rate-card .code {
+            font-size: 13px;
+            font-weight: 500;
+            color: #202124;
+        }
+
+        .rate-card .rate {
+            font-size: 16px;
+            font-weight: 600;
+            color: #202124;
+        }
+
+        .spreadsheet-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f1f3f4;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .sheet-title {
+            font-weight: 500;
+            color: #202124;
+        }
+
+        .sheet-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #1a73e8;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1557b0;
+        }
+
+        .btn-secondary {
+            background: #f1f3f4;
+            color: #202124;
+            border: 1px solid #dadce0;
+        }
+
+        .btn-secondary:hover {
+            background: #e8eaed;
+        }
+
+        .btn-danger {
+            background: #ea4335;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c5221f;
+        }
+
+        /* Row drag and drop styles */
+        .entry-row {
+            cursor: grab;
+        }
+
+        .entry-row:active {
+            cursor: grabbing;
+        }
+
+        .entry-row.dragging {
+            opacity: 0.5;
+            background-color: #e8f0fe;
+        }
+
+        .entry-row.drag-over {
+            border-top: 3px solid #1a73e8;
+        }
+
+        .entry-row.drag-over-bottom {
+            border-bottom: 3px solid #1a73e8;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            color: #dadce0;
+            padding: 0 4px;
+            font-size: 16px;
+            user-select: none;
+        }
+
+        .drag-handle:hover {
+            color: #5f6368;
+        }
+
+        .row-actions {
+            white-space: nowrap;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ea4335;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .delete-btn:hover {
+            background-color: #fce8e6;
+        }
+
+        /* Clickable row for notes toggle */
+        .entry-row.clickable-row {
+            cursor: pointer;
+        }
+
+        .entry-row.clickable-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        .notes-toggle-indicator {
+            color: #1a73e8;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f1f3f4;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 12px;
+            color: #5f6368;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th.summary-header {
+            background: #e8f0fe;
+            color: #1a73e8;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+        }
+
+        td.input-cell {
+            background: #ffffff;
+        }
+
+        td.calculated {
+            background: #fafafa;
+            color: #202124;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+            background: white;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
+        }
+
+        input.time-input {
+            width: 90px;
+            text-align: center;
+        }
+
+        input.date-input {
+            width: 120px;
+        }
+
+        .add-row-btn {
+            padding: 12px 16px;
+            text-align: center;
+            background: #fafafa;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .add-row-btn:hover {
+            background: #e8eaed;
+        }
+
+        .add-row-btn a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .summary-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .summary-section h2 {
+            color: #1a73e8;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-day {
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .summary-day h3 {
+            color: #202124;
+            margin-bottom: 12px;
+            font-size: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #1a73e8;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .summary-row.total {
+            border-top: 1px solid #e0e0e0;
+            margin-top: 8px;
+            padding-top: 12px;
+            font-weight: 600;
+        }
+
+        .code-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .code-q310 { background: #34a853; }
+        .code-q311 { background: #fbbc04; color: #202124; }
+        .code-q312 { background: #4285f4; }
+        .code-q313 { background: #ea4335; }
+
+        .instructions {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .instructions h2 {
+            color: #1a73e8;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .instructions ol {
+            margin-left: 24px;
+            color: #202124;
+            line-height: 1.8;
+        }
+
+        .instructions li {
+            margin: 8px 0;
+        }
+
+        .highlight {
+            background: #fef7e0;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Print styles */
+        @media print {
+            body { padding: 0; }
+            .btn, .add-row-btn, .sheet-actions { display: none; }
+            .spreadsheet-container, .summary-section, .instructions { box-shadow: none; }
+        }
+
+        .row-actions {
+            width: 60px;
+            text-align: center;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ea4335;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .delete-btn:hover {
+            background: #fce8e6;
+        }
+
+        .totals-row {
+            background: #e8f0fe !important;
+            font-weight: 500;
+        }
+
+        .totals-row td {
+            border-top: 2px solid #1a73e8;
+        }
+
+        .daily-summary {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .daily-summary-header {
+            background: #1a73e8;
+            color: white;
+            padding: 16px 20px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .daily-summary-content {
+            padding: 16px 20px;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .summary-table th {
+            background: #f1f3f4;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-table td {
+            font-size: 13px;
+        }
+
+        .summary-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .grand-total {
+            background: #e8f0fe !important;
+            font-weight: 600;
+        }
+
+        .grand-total td {
+            border-top: 2px solid #1a73e8;
+            font-size: 14px;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #5f6368;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .category-direct-in { color: #34a853; font-weight: 500; }
+        .category-direct-out { color: #e37400; font-weight: 500; }
+        .category-indirect { color: #4285f4; font-weight: 500; }
+        .category-admin { color: #ea4335; font-weight: 500; }
+
+        .validation-warning {
+            background: #fce8e6;
+            color: #c5221f;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .validation-info {
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .modal h3 {
+            color: #1a73e8;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .modal p {
+            color: #202124;
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+        .modal ol {
+            margin-left: 20px;
+            margin-bottom: 16px;
+            line-height: 1.8;
+        }
+
+        .modal li {
+            margin: 8px 0;
+        }
+
+        .modal-note {
+            background: #fef7e0;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 16px;
+        }
+
+        .modal-note strong {
+            color: #e37400;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .google-btn {
+            background: #4285f4;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .google-btn:hover {
+            background: #3367d6;
+        }
+
+        .btn-duplicate {
+            background: #34a853;
+            color: white;
+        }
+
+        .btn-duplicate:hover {
+            background: #2d8e47;
+        }
+
+        .duplicate-options {
+            display: flex;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .duplicate-option {
+            flex: 1;
+            padding: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .duplicate-option:hover {
+            border-color: #1a73e8;
+            background: #f8f9fa;
+        }
+
+        .duplicate-option.selected {
+            border-color: #1a73e8;
+            background: #e8f0fe;
+        }
+
+        .duplicate-option h4 {
+            color: #1a73e8;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .duplicate-option p {
+            font-size: 12px;
+            color: #5f6368;
+        }
+
+        .form-group {
+            margin: 16px 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #202124;
+        }
+
+        .form-group input {
+            max-width: 200px;
+        }
+
+        /* Toggle switch styles */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+
+        .toggle-label {
+            font-weight: 500;
+            color: #202124;
+            flex: 1;
+        }
+
+        .toggle-label span {
+            display: block;
+            font-size: 12px;
+            color: #5f6368;
+            font-weight: normal;
+            margin-top: 4px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 28px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #34a853;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Notes section styles */
+        .notes-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .notes-section h5 {
+            font-size: 12px;
+            color: #5f6368;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 6px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            color: #202124;
+            line-height: 1.4;
+        }
+
+        .other-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .other-input:focus {
+            outline: none;
+            border-color: #1a73e8;
+        }
+
+        .notes-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px 0;
+            color: #1a73e8;
+            font-size: 13px;
+        }
+
+        .notes-toggle:hover {
+            text-decoration: underline;
+        }
+
+        .notes-content {
+            display: none;
+            padding-top: 8px;
+        }
+
+        .notes-content.expanded {
+            display: block;
+        }
+
+        .notes-toggle-icon {
+            transition: transform 0.2s;
+        }
+
+        .notes-toggle-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        /* Row expansion for notes */
+        .entry-row {
+            transition: background-color 0.2s;
+        }
+
+        .entry-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        .notes-row {
+            background-color: #fafafa;
+        }
+
+        .notes-row td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>FHO+ Hourly Rate Time Tracker</h1>
+        <p class="subtitle">Track your direct care, indirect care, and clinical administration hours for billing</p>
+
+        <div class="info-box">
+            <h3>Important Billing Rules</h3>
+            <ul>
+                <li>Hourly rate applies to <strong>enrolled patients only</strong></li>
+                <li>Document total times for each category <strong>per day</strong>, not per patient</li>
+                <li>Billed in <strong class="highlight">15-minute units</strong> (8+ minute remainder rounds up)</li>
+                <li>Maximum <strong>14 hours/day</strong>, <strong>240 hours per 28 days</strong></li>
+                <li>Maximum <strong>25%</strong> of total hours for indirect + clinical admin combined</li>
+                <li>Maximum <strong>5%</strong> of direct + indirect care for clinical admin</li>
+            </ul>
+        </div>
+
+        <div class="rate-reference">
+            <div class="rate-card direct-in">
+                <h4>Direct Care (In Office)</h4>
+                <div class="code">Q310</div>
+                <div class="rate">$80/hr</div>
+            </div>
+            <div class="rate-card direct-out">
+                <h4>Direct Care (Out of Office)</h4>
+                <div class="code">Q311</div>
+                <div class="rate">$68/hr</div>
+            </div>
+            <div class="rate-card indirect">
+                <h4>Indirect Patient Care</h4>
+                <div class="code">Q312</div>
+                <div class="rate">$80/hr</div>
+            </div>
+            <div class="rate-card admin">
+                <h4>Clinical Administration</h4>
+                <div class="code">Q313</div>
+                <div class="rate">$80/hr</div>
+            </div>
+        </div>
+
+        <div class="toggle-container">
+            <div class="toggle-label">
+                Auto-calculate Max Allowed Hours
+                <span>When enabled, Indirect Care and Clinical Admin are automatically set to maximum allowed based on daily totals</span>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="autoCalculateToggle" checked onchange="toggleAutoCalculate()">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <div class="instructions">
+            <h2>How to Use This Template</h2>
+            <ol>
+                <li>Enter the <strong>Date</strong> for each time entry using the date picker</li>
+                <li>Select the <strong>Category</strong> from the dropdown (Direct Care In Office, Direct Care Out of Office, Indirect Care, or Clinical Administration)</li>
+                <li>Enter <strong>Start Time</strong> and <strong>End Time</strong> using the time picker (format adapts to your browser's locale settings)</li>
+                <li>The spreadsheet will automatically calculate <strong>Duration</strong>, <strong>Rounded Units</strong>, and <strong>Hours</strong></li>
+                <li>Scroll down to see the <strong>Daily Summary</strong> showing total hours per category per day</li>
+                <li>Click <strong>Export to CSV</strong> to save your data, or <strong>Import CSV</strong> to load previously saved data</li>
+            </ol>
+        </div>
+
+        <div class="spreadsheet-container">
+            <div class="sheet-header">
+                <span class="sheet-title">Time Entries</span>
+                <div class="sheet-actions">
+                    <button class="btn btn-duplicate" onclick="openDuplicateModal()">Duplicate Entries</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('importFileInput').click()">Import CSV</button>
+                    <button class="btn btn-secondary" onclick="exportToCSV()">Export to CSV</button>
+                    <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+                    <button class="btn btn-primary" onclick="addTimeEntry()">+ Add Entry</button>
+                    <input type="file" id="importFileInput" accept=".csv" style="display: none;" onchange="importFromCSV(event)">
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table id="timeEntryTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Fee Code</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Duration (min)</th>
+                            <th>15-min Units</th>
+                            <th>Hours</th>
+                            <th style="width: 60px;">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timeEntryBody">
+                        <!-- Rows will be added dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="add-row-btn" onclick="addTimeEntry()">
+                <a href="javascript:void(0)">+ Add another entry</a>
+            </div>
+        </div>
+
+        <div class="daily-summary">
+            <div class="daily-summary-header">Daily Summary by Date</div>
+            <div class="daily-summary-content">
+                <table class="summary-table" id="dailySummaryTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Fee Code</th>
+                            <th>Total Hours</th>
+                            <th>Rate</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailySummaryBody">
+                        <!-- Summary rows will be added dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="daily-summary">
+            <div class="daily-summary-header">Monthly Totals Summary</div>
+            <div class="daily-summary-content">
+                <table class="summary-table" id="monthlySummaryTable">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Fee Code</th>
+                            <th>Total Hours</th>
+                            <th>Rate</th>
+                            <th>Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlySummaryBody">
+                        <!-- Monthly summary rows -->
+                    </tbody>
+                </table>
+                <div id="monthlyGrandTotal" style="margin-top: 16px; padding: 16px; background: #e8f0fe; border-radius: 8px; font-weight: 600;"></div>
+            </div>
+        </div>
+
+        <div class="daily-summary">
+            <div class="daily-summary-header">Validation & Compliance Checks</div>
+            <div class="daily-summary-content" id="validationResults">
+                <!-- Validation results will be added dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Duplicate Entries Modal -->
+    <div class="modal-overlay" id="duplicateModal">
+        <div class="modal">
+            <h3>Duplicate Entries</h3>
+            <p>Select whether to duplicate a single day or an entire week:</p>
+
+            <div class="form-group">
+                <label>Duplicate Type:</label>
+                <div class="duplicate-options">
+                    <div class="duplicate-option" onclick="selectDuplicateOption('day')" id="option-day">
+                        <h4>Single Day</h4>
+                        <p>Duplicate one day's entries</p>
+                    </div>
+                    <div class="duplicate-option" onclick="selectDuplicateOption('week')" id="option-week">
+                        <h4>Full Week</h4>
+                        <p>Duplicate entire week's entries</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dayOptions">
+                <div class="form-group">
+                    <label>Source Date (entries to duplicate):</label>
+                    <input type="date" id="duplicateSourceDate" class="date-input">
+                </div>
+
+                <div class="form-group">
+                    <label>Target Date:</label>
+                    <input type="date" id="duplicateTargetDate" class="date-input">
+                </div>
+            </div>
+
+            <div id="weekOptions" style="display: none;">
+                <div class="form-group">
+                    <label>Source Week Starting (Monday):</label>
+                    <input type="date" id="duplicateSourceWeek" class="date-input">
+                    <p style="font-size: 11px; color: #5f6368; margin-top: 4px;">Select the Monday of the week you want to duplicate</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Target Week Starting (Monday):</label>
+                    <input type="date" id="duplicateTargetWeek" class="date-input">
+                    <p style="font-size: 11px; color: #5f6368; margin-top: 4px;">Select the Monday of the target week</p>
+                </div>
+            </div>
+
+            <div id="duplicatePreview" style="margin: 16px 0; padding: 12px; background: #f8f9fa; border-radius: 8px; display: none;">
+                <strong>Preview:</strong> <span id="duplicatePreviewText"></span>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeDuplicateModal()">Cancel</button>
+                <button class="btn btn-duplicate" onclick="duplicateEntries()">Duplicate Entries</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Category definitions
+        const categories = {
+            'direct-in': { name: 'Direct Care (In Office)', code: 'Q310', rate: 80 },
+            'direct-out': { name: 'Direct Care (Out of Office)', code: 'Q311', rate: 68 },
+            'indirect': { name: 'Indirect Patient Care', code: 'Q312', rate: 80 },
+            'admin': { name: 'Clinical Administration', code: 'Q313', rate: 80 }
+        };
+
+        // Eligible activities for indirect patient care
+        const indirectActivities = [
+            'Paperwork (charting, referrals, requisitions, clinical forms)',
+            'Chart reviews / reviewing labs, imaging, consult notes',
+            'Care coordination and planning',
+            'Conferencing with physicians and healthcare professionals',
+            'Conferencing with family members / patient representatives',
+            'Patient communication (pre- or post-direct care)',
+            'Reviewing clinical information for patient needs',
+            'Patient-specific clinical teaching'
+        ];
+
+        // Eligible activities for clinical administration
+        const adminActivities = [
+            'Proactive patient population management',
+            'Screening rate monitoring',
+            'Chronic disease care gaps management',
+            'EMR updates requiring physician expertise',
+            'Quality improvement initiatives'
+        ];
+
+        // Get today's date in YYYY-MM-DD format
+        function getTodayDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Calculate duration in minutes
+        function calculateDuration(startTime, endTime) {
+            if (!startTime || !endTime) return 0;
+
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            const [endHour, endMin] = endTime.split(':').map(Number);
+
+            const startMinutes = startHour * 60 + startMin;
+            const endMinutes = endHour * 60 + endMin;
+
+            let duration = endMinutes - startMinutes;
+            if (duration < 0) duration += 24 * 60; // Handle overnight entries
+
+            return duration;
+        }
+
+        // Round to 15-minute units (8+ min rounds up)
+        function roundToUnits(durationMinutes) {
+            const units = Math.floor(durationMinutes / 15);
+            const remainder = durationMinutes % 15;
+
+            if (remainder >= 8) {
+                return units + 1;
+            }
+            return units;
+        }
+
+        // Convert units to hours (decimal)
+        function unitsToHours(units) {
+            return units * 15 / 60;
+        }
+
+        // Get fee code by category key
+        function getFeeCode(categoryKey) {
+            return categories[categoryKey]?.code || '';
+        }
+
+        // Get rate by category key
+        function getRate(categoryKey) {
+            return categories[categoryKey]?.rate || 0;
+        }
+
+        // Add a new time entry row
+        function addTimeEntry(date = '', category = '', startTime = '', endTime = '', notes = {}, suppressAuto = false) {
+            const tbody = document.getElementById('timeEntryBody');
+            const row = document.createElement('tr');
+            const rowId = 'row-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            const notesId = 'notes-' + rowId;
+            const isIndirectAdmin = category === 'indirect' || category === 'admin';
+
+            row.id = rowId;
+            row.className = `entry-row${isIndirectAdmin ? ' clickable-row' : ''}`;
+            row.setAttribute('draggable', 'true');
+            row.setAttribute('ondragstart', `handleDragStart(event, '${rowId}')`);
+            row.setAttribute('ondragend', 'handleDragEnd(event)');
+            row.setAttribute('ondragover', 'handleDragOver(event)');
+            row.setAttribute('ondragenter', 'handleDragEnter(event)');
+            row.setAttribute('ondragleave', 'handleDragLeave(event)');
+            row.setAttribute('ondrop', `handleDrop(event, '${rowId}')`);
+            if (isIndirectAdmin) {
+                row.setAttribute('onclick', `toggleNotesVisibility('${rowId}')`);
+            }
+
+            row.innerHTML = `
+                <td class="row-actions">
+                    <span class="drag-handle" title="Drag to reorder">☰</span>
+                </td>
+                <td class="input-cell">
+                    <input type="date" class="date-input" value="${date || getTodayDate()}" onchange="updateCalculations()">
+                </td>
+                <td class="input-cell">
+                    <select onchange="updateCalculations(); updateFeeCode(this); toggleNotesSection(this); updateRowClickable(this)">
+                        <option value="">Select...</option>
+                        <option value="direct-in" ${category === 'direct-in' ? 'selected' : ''}>Direct Care (In Office)</option>
+                        <option value="direct-out" ${category === 'direct-out' ? 'selected' : ''}>Direct Care (Out of Office)</option>
+                        <option value="indirect" ${category === 'indirect' ? 'selected' : ''}>Indirect Patient Care</option>
+                        <option value="admin" ${category === 'admin' ? 'selected' : ''}>Clinical Administration</option>
+                    </select>
+                </td>
+                <td class="calculated"><span class="code-badge code-q310">-</span></td>
+                <td class="input-cell">
+                    <input type="time" class="time-input" value="${startTime}" onchange="updateCalculations()" step="300">
+                </td>
+                <td class="input-cell">
+                    <input type="time" class="time-input" value="${endTime}" onchange="updateCalculations()" step="300">
+                </td>
+                <td class="calculated duration-cell">0</td>
+                <td class="calculated units-cell">0</td>
+                <td class="calculated hours-cell">0.00</td>
+                <td class="row-actions">
+                    <button class="delete-btn" onclick="deleteRow('${rowId}')" title="Delete">×</button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+
+            // Add notes row for indirect and admin categories
+            const notesRow = document.createElement('tr');
+            notesRow.id = notesId;
+            notesRow.className = 'notes-row';
+            notesRow.style.display = isIndirectAdmin ? '' : 'none';
+            notesRow.innerHTML = `
+                <td colspan="10">
+                    <div class="notes-section">
+                        <h5>Eligible Activities (check all that apply):</h5>
+                        <div class="checkbox-group" id="${notesId}-checkboxes">
+                            ${getNotesCheckboxes(category)}
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <label style="font-size: 12px; color: #5f6368;">Other activities:</label>
+                            <input type="text" class="other-input" id="${notesId}-other" placeholder="Enter other eligible activities..." onchange="saveNotes('${rowId}')">
+                        </div>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(notesRow);
+
+            // Update fee code if category is set
+            if (category) {
+                const select = row.querySelector('select');
+                updateFeeCode(select);
+            }
+
+            // Apply imported notes if provided (only checkedActivities is required; otherActivities is optional)
+            if (notes.checkedActivities && (category === 'indirect' || category === 'admin')) {
+                // Apply checkboxes after a small delay to ensure DOM is ready
+                setTimeout(() => {
+                    applyNotesToRow(rowId, notes);
+                }, 50);
+            }
+
+            updateCalculations(suppressAuto);
+        }
+
+        // Update row clickable class based on category
+        function updateRowClickable(selectElement) {
+            const row = selectElement.closest('tr');
+            const category = selectElement.value;
+            const isIndirectAdmin = category === 'indirect' || category === 'admin';
+
+            if (isIndirectAdmin) {
+                row.classList.add('clickable-row');
+                row.setAttribute('onclick', `toggleNotesVisibility('${row.id}')`);
+            } else {
+                row.classList.remove('clickable-row');
+                row.removeAttribute('onclick');
+            }
+        }
+
+        // Toggle notes visibility when clicking on the row
+        function toggleNotesVisibility(rowId) {
+            const row = document.getElementById(rowId);
+            if (!row) return;
+
+            const notesRow = row.nextElementSibling;
+            if (!notesRow || !notesRow.classList.contains('notes-row')) return;
+
+            // Don't toggle if clicking on input elements or drag handle
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT' || event.target.tagName === 'BUTTON' || event.target.classList.contains('drag-handle')) {
+                return;
+            }
+
+            if (notesRow.style.display === 'none') {
+                notesRow.style.display = '';
+            } else {
+                notesRow.style.display = 'none';
+            }
+        }
+
+        // Drag and drop functions
+        let draggedRowId = null;
+
+        function handleDragStart(event, rowId) {
+            draggedRowId = rowId;
+            event.target.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', rowId);
+        }
+
+        function handleDragEnd(event) {
+            event.target.classList.remove('dragging');
+            // Remove all drag-over indicators
+            document.querySelectorAll('.entry-row').forEach(row => {
+                row.classList.remove('drag-over', 'drag-over-bottom');
+            });
+            draggedRowId = null;
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(event) {
+            event.preventDefault();
+            const row = event.target.closest('.entry-row');
+            if (row && row.id !== draggedRowId) {
+                // Determine if we're hovering over top or bottom half
+                const rect = row.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                if (event.clientY < midY) {
+                    row.classList.add('drag-over');
+                    row.classList.remove('drag-over-bottom');
+                } else {
+                    row.classList.add('drag-over-bottom');
+                    row.classList.remove('drag-over');
+                }
+            }
+        }
+
+        function handleDragLeave(event) {
+            const row = event.target.closest('.entry-row');
+            if (row) {
+                row.classList.remove('drag-over', 'drag-over-bottom');
+            }
+        }
+
+        function handleDrop(event, targetRowId) {
+            event.preventDefault();
+
+            if (!draggedRowId || draggedRowId === targetRowId) return;
+
+            const draggedRow = document.getElementById(draggedRowId);
+            const targetRow = document.getElementById(targetRowId);
+
+            if (!draggedRow || !targetRow) return;
+
+            // Get the notes row for each entry row
+            const draggedNotesRow = draggedRow.nextElementSibling;
+            const targetNotesRow = targetRow.nextElementSibling;
+
+            // Determine position (above or below target)
+            const rect = targetRow.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            const insertBefore = event.clientY < midY;
+
+            const tbody = document.getElementById('timeEntryBody');
+
+            if (insertBefore) {
+                // Insert dragged row before target row
+                tbody.insertBefore(draggedRow, targetRow);
+                // Also move the notes row
+                if (draggedNotesRow && draggedNotesRow.classList.contains('notes-row')) {
+                    tbody.insertBefore(draggedNotesRow, targetRow);
+                }
+            } else {
+                // Insert dragged row after target row
+                const nextSibling = targetRow.nextElementSibling;
+                if (nextSibling) {
+                    tbody.insertBefore(draggedRow, nextSibling);
+                    if (draggedNotesRow && draggedNotesRow.classList.contains('notes-row')) {
+                        tbody.insertBefore(draggedNotesRow, nextSibling);
+                    }
+                } else {
+                    tbody.appendChild(draggedRow);
+                    if (draggedNotesRow && draggedNotesRow.classList.contains('notes-row')) {
+                        tbody.appendChild(draggedNotesRow);
+                    }
+                }
+            }
+
+            // Clean up indicators
+            document.querySelectorAll('.entry-row').forEach(row => {
+                row.classList.remove('drag-over', 'drag-over-bottom');
+            });
+
+            // Trigger update
+            updateCalculations();
+        }
+
+        // Apply imported notes to a row
+        function applyNotesToRow(rowId, notes) {
+            const row = document.getElementById(rowId);
+            if (!row) return;
+
+            const notesRow = row.nextElementSibling;
+            if (!notesRow || !notesRow.classList.contains('notes-row')) return;
+
+            // Apply checked activities
+            if (notes.checkedActivities) {
+                const checkboxes = notesRow.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(cb => {
+                    const label = cb.nextElementSibling?.textContent;
+                    if (label && notes.checkedActivities.includes(label)) {
+                        cb.checked = true;
+                    }
+                });
+            }
+
+            // Apply other activities
+            if (notes.otherActivities) {
+                const otherInput = notesRow.querySelector('.other-input');
+                if (otherInput) {
+                    otherInput.value = notes.otherActivities;
+                }
+            }
+        }
+
+        // Get notes data for a row (for export)
+        function getNotesForRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (!row) return { checkedActivities: '', otherActivities: '' };
+
+            const notesRow = row.nextElementSibling;
+            if (!notesRow || !notesRow.classList.contains('notes-row')) {
+                return { checkedActivities: '', otherActivities: '' };
+            }
+
+            const checkedBoxes = notesRow.querySelectorAll('input[type="checkbox"]:checked');
+            const checkedActivities = Array.from(checkedBoxes).map(cb => cb.nextElementSibling?.textContent || '').filter(Boolean);
+            const otherInput = notesRow.querySelector('.other-input');
+            const otherActivities = otherInput?.value || '';
+
+            return {
+                checkedActivities: checkedActivities.join(';'),
+                otherActivities: otherActivities
+            };
+        }
+
+        // Get notes checkboxes HTML based on category
+        function getNotesCheckboxes(category) {
+            let activities = [];
+            if (category === 'indirect') {
+                activities = indirectActivities;
+            } else if (category === 'admin') {
+                activities = adminActivities;
+            }
+
+            return activities.map((activity, index) => `
+                <div class="checkbox-item">
+                    <input type="checkbox" id="activity-${category}-${index}" onchange="saveNotes(this.closest('tr').previousElementSibling.id)">
+                    <label for="activity-${category}-${index}">${activity}</label>
+                </div>
+            `).join('');
+        }
+
+        // Toggle notes section visibility
+        function toggleNotesSection(selectElement) {
+            const row = selectElement.closest('tr');
+            const notesRow = row.nextElementSibling;
+            const category = selectElement.value;
+
+            if (category === 'indirect' || category === 'admin') {
+                notesRow.style.display = '';
+                // Update checkboxes
+                const checkboxesDiv = notesRow.querySelector('.checkbox-group');
+                checkboxesDiv.innerHTML = getNotesCheckboxes(category);
+            } else {
+                notesRow.style.display = 'none';
+            }
+        }
+
+        // Save notes (placeholder for future functionality)
+        function saveNotes(rowId) {
+            // This function can be expanded to save notes to localStorage or include in CSV export
+            const row = document.getElementById(rowId);
+            if (!row) return;
+
+            const notesRow = row.nextElementSibling;
+            const checkedBoxes = notesRow.querySelectorAll('input[type="checkbox"]:checked');
+            const otherInput = notesRow.querySelector('.other-input');
+
+            // Store checked activities
+            const activities = Array.from(checkedBoxes).map(cb => cb.nextElementSibling.textContent);
+            if (otherInput.value) {
+                activities.push(otherInput.value);
+            }
+
+            // Could save to localStorage here for persistence
+        }
+
+        // Update fee code display when category changes
+        function updateFeeCode(selectElement) {
+            const row = selectElement.closest('tr');
+            const category = selectElement.value;
+            const codeCell = row.querySelector('.code-badge');
+
+            if (category && categories[category]) {
+                const code = categories[category].code;
+                codeCell.textContent = code;
+                codeCell.className = 'code-badge code-' + code.toLowerCase();
+            } else {
+                codeCell.textContent = '-';
+                codeCell.className = 'code-badge';
+            }
+        }
+
+        // Delete a row
+        function deleteRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                // Also delete the notes row if it exists
+                const notesRow = row.nextElementSibling;
+                if (notesRow && notesRow.classList.contains('notes-row')) {
+                    notesRow.remove();
+                }
+                row.remove();
+                updateCalculations();
+            }
+        }
+
+        // Toggle auto-calculate feature
+        function toggleAutoCalculate() {
+            const autoCalc = document.getElementById('autoCalculateToggle')?.checked || false;
+
+            if (autoCalc) {
+                // When enabling, regenerate all auto entries
+                autoGenerateIndirectAdminEntries();
+            } else {
+                // When disabling, remove auto-generated entries but keep manual ones
+                removeAutoGeneratedEntries();
+            }
+
+            updateDailySummary();
+            updateMonthlySummary();
+            runValidationChecks();
+        }
+
+        // Remove auto-generated entries when auto-calculate is turned off
+        function removeAutoGeneratedEntries() {
+            const autoEntries = document.querySelectorAll('.auto-indirect-entry, .auto-admin-entry');
+            autoEntries.forEach(row => {
+                deleteRow(row.id);
+            });
+        }
+
+        // Auto-generate indirect and admin entries when auto-calculate is enabled
+        function autoGenerateIndirectAdminEntries() {
+            const autoCalc = document.getElementById('autoCalculateToggle')?.checked || false;
+            if (!autoCalc) return;
+
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+
+            // First, recalculate hours for direct care entries (skip auto-generated ones)
+            rows.forEach(row => {
+                if (row.classList.contains('auto-indirect-entry') || row.classList.contains('auto-admin-entry')) {
+                    return;
+                }
+                const inputs = row.querySelectorAll('input[type="time"]');
+                const startInput = inputs[0];
+                const endInput = inputs[1];
+                const start = startInput?.value;
+                const end = endInput?.value;
+                const duration = calculateDuration(start, end);
+                const units = roundToUnits(duration);
+                const hours = unitsToHours(units);
+                row.querySelector('.duration-cell').textContent = duration;
+                row.querySelector('.units-cell').textContent = units;
+                row.querySelector('.hours-cell').textContent = hours.toFixed(2);
+            });
+
+            // Now collect direct care hours by date
+            const dateDirectHours = {};
+            const existingIndirectAdmin = {}; // Track which dates already have manual indirect/admin entries
+
+            rows.forEach(row => {
+                const date = row.querySelector('input[type="date"]')?.value;
+                const categorySelect = row.querySelector('select');
+                const categoryKey = categorySelect?.value;
+                const hours = parseFloat(row.querySelector('.hours-cell')?.textContent) || 0;
+
+                if (date && hours > 0) {
+                    if (categoryKey === 'direct-in' || categoryKey === 'direct-out') {
+                        dateDirectHours[date] = (dateDirectHours[date] || 0) + hours;
+                    } else if ((categoryKey === 'indirect' || categoryKey === 'admin') &&
+                               !row.classList.contains('auto-indirect-entry') &&
+                               !row.classList.contains('auto-admin-entry')) {
+                        // Mark that this date already has a MANUAL entry for this category
+                        if (!existingIndirectAdmin[date]) {
+                            existingIndirectAdmin[date] = { indirect: false, admin: false };
+                        }
+                        existingIndirectAdmin[date][categoryKey] = true;
+                    }
+                }
+            });
+
+            // Generate or update entries for each date with direct care
+            Object.keys(dateDirectHours).forEach(date => {
+                const directHours = dateDirectHours[date];
+
+                // Show auto-entries when there's at least 1 direct care entry
+                const minHoursToShow = 0.01; // Any positive hours
+
+                if (directHours >= minHoursToShow) {
+                    const maxIndirect = directHours * 0.20; // 20% of direct care
+                    const maxAdmin = directHours * 0.05; // 5% of direct care
+
+                    // Check if manual entries already exist for this date
+                    const hasManualIndirect = existingIndirectAdmin[date]?.indirect;
+                    const hasManualAdmin = existingIndirectAdmin[date]?.admin;
+
+                    // Check if auto entries already exist for this date
+                    const existingAutoIndirect = document.querySelector(`.auto-indirect-entry[data-date="${date}"]`);
+                    const existingAutoAdmin = document.querySelector(`.auto-admin-entry[data-date="${date}"]`);
+
+                    // Add or update indirect entry
+                    if (!hasManualIndirect) {
+                        if (existingAutoIndirect) {
+                            // Update existing auto entry
+                            updateAutoEntryHours(existingAutoIndirect, maxIndirect);
+                        } else {
+                            // Create new auto entry
+                            addAutoTimeEntry(date, 'indirect', maxIndirect);
+                        }
+                    }
+
+                    // Add or update admin entry
+                    if (!hasManualAdmin) {
+                        if (existingAutoAdmin) {
+                            // Update existing auto entry
+                            updateAutoEntryHours(existingAutoAdmin, maxAdmin);
+                        } else {
+                            // Create new auto entry
+                            addAutoTimeEntry(date, 'admin', maxAdmin);
+                        }
+                    }
+                }
+            });
+
+            // Remove auto-entries for dates without direct care
+            document.querySelectorAll('.auto-indirect-entry, .auto-admin-entry').forEach(row => {
+                const date = row.querySelector('input[type="date"]')?.value;
+                if (!dateDirectHours[date] || dateDirectHours[date] <= 0) {
+                    deleteRow(row.id);
+                }
+            });
+        }
+
+        // Add an auto-generated time entry (indirect/admin with calculated hours)
+        function addAutoTimeEntry(date, category, hours) {
+            const tbody = document.getElementById('timeEntryBody');
+            const row = document.createElement('tr');
+            const rowId = 'row-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            const notesId = 'notes-' + rowId;
+
+            // Mark as auto-generated
+            const autoClass = category === 'indirect' ? 'auto-indirect-entry' : 'auto-admin-entry';
+            row.id = rowId;
+            row.className = `entry-row ${autoClass} clickable-row`;
+            row.setAttribute('data-date', date);
+            row.setAttribute('draggable', 'true');
+            row.setAttribute('ondragstart', `handleDragStart(event, '${rowId}')`);
+            row.setAttribute('ondragend', 'handleDragEnd(event)');
+            row.setAttribute('ondragover', 'handleDragOver(event)');
+            row.setAttribute('ondragenter', 'handleDragEnter(event)');
+            row.setAttribute('ondragleave', 'handleDragLeave(event)');
+            row.setAttribute('ondrop', `handleDrop(event, '${rowId}')`);
+            row.setAttribute('onclick', `toggleNotesVisibility('${rowId}')`);
+
+            const units = roundToUnits(hours * 60);
+
+            row.innerHTML = `
+                <td class="row-actions">
+                    <span class="drag-handle" title="Drag to reorder">☰</span>
+                </td>
+                <td class="input-cell">
+                    <input type="date" class="date-input" value="${date}" onchange="handleAutoEntryChange('${rowId}')">
+                </td>
+                <td class="input-cell">
+                    <select onchange="handleAutoEntryCategoryChange(this, '${rowId}')">
+                        <option value="">Select...</option>
+                        <option value="direct-in">Direct Care (In Office)</option>
+                        <option value="direct-out">Direct Care (Out of Office)</option>
+                        <option value="indirect" ${category === 'indirect' ? 'selected' : ''}>Indirect Patient Care</option>
+                        <option value="admin" ${category === 'admin' ? 'selected' : ''}>Clinical Administration</option>
+                    </select>
+                </td>
+                <td class="calculated"><span class="code-badge code-${category === 'indirect' ? 'q312' : 'q313'}">${category === 'indirect' ? 'Q312' : 'Q313'}</span></td>
+                <td class="input-cell">
+                    <input type="time" class="time-input auto-start" value="09:00" onchange="updateCalculations()" step="300" disabled style="background-color: #f0f0f0; color: #888;">
+                </td>
+                <td class="input-cell">
+                    <input type="time" class="time-input auto-end" onchange="updateCalculations()" step="300" disabled style="background-color: #f0f0f0; color: #888;">
+                </td>
+                <td class="calculated duration-cell">${(hours * 60).toFixed(0)}</td>
+                <td class="calculated units-cell">${units}</td>
+                <td class="calculated hours-cell">${hours.toFixed(2)}</td>
+                <td class="row-actions">
+                    <button class="delete-btn" onclick="deleteRow('${rowId}')" title="Delete">×</button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+
+            // Add notes row for indirect and admin categories
+            const notesRow = document.createElement('tr');
+            notesRow.id = notesId;
+            notesRow.className = 'notes-row';
+            notesRow.style.display = '';
+            notesRow.innerHTML = `
+                <td colspan="10">
+                    <div class="notes-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h5>Eligible Activities (auto-calculated - ${hours.toFixed(2)} hrs @ ${category === 'indirect' ? '20%' : '5%'} of direct care)</h5>
+                            <span style="font-size: 11px; color: #5f6368; background: #e8f0fe; padding: 2px 8px; border-radius: 4px;">Auto-calculated</span>
+                        </div>
+                        <div class="checkbox-group" id="${notesId}-checkboxes">
+                            ${getNotesCheckboxes(category)}
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <label style="font-size: 12px; color: #5f6368;">Other activities:</label>
+                            <input type="text" class="other-input" id="${notesId}-other" placeholder="Enter other eligible activities..." onchange="saveNotes('${rowId}')">
+                        </div>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(notesRow);
+
+            // Set end time based on hours (calculated from 09:00)
+            const endHour = 9 + Math.floor(hours);
+            const endMin = Math.round((hours % 1) * 60);
+            row.querySelector('.auto-end').value = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
+        }
+
+        // Handle when auto-generated entry's date is changed
+        function handleAutoEntryChange(rowId) {
+            // Remove old auto entry and regenerate for new date
+            deleteRow(rowId);
+            autoGenerateIndirectAdminEntries();
+            updateCalculations();
+        }
+
+        // Handle when auto-generated entry's category is changed
+        function handleAutoEntryCategoryChange(selectElement, rowId) {
+            const row = document.getElementById(rowId);
+            if (!row) return;
+
+            // If user changes from indirect/admin to direct, remove auto marker
+            const category = selectElement.value;
+            if (category === 'direct-in' || category === 'direct-out') {
+                row.classList.remove('auto-indirect-entry', 'auto-admin-entry');
+                row.removeAttribute('data-date');
+
+                // Enable time inputs
+                row.querySelectorAll('input[type="time"]').forEach(input => {
+                    input.disabled = false;
+                    input.style.backgroundColor = '';
+                    input.style.color = '';
+                });
+
+                // Hide notes section
+                const notesRow = row.nextElementSibling;
+                if (notesRow && notesRow.classList.contains('notes-row')) {
+                    notesRow.style.display = 'none';
+                }
+            }
+
+            updateCalculations();
+        }
+
+        // Update hours of an auto-generated entry
+        function updateAutoEntryHours(row, hours) {
+            const units = roundToUnits(hours * 60);
+            row.querySelector('.duration-cell').textContent = (hours * 60).toFixed(0);
+            row.querySelector('.units-cell').textContent = units;
+            row.querySelector('.hours-cell').textContent = hours.toFixed(2);
+
+            // Update end time
+            const endHour = 9 + Math.floor(hours);
+            const endMin = Math.round((hours % 1) * 60);
+            row.querySelector('.auto-end').value = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
+        }
+
+        // Update all calculations
+        function updateCalculations(suppressAuto) {
+            // Auto-generate indirect and admin entries when auto-calculate is enabled
+            if (!suppressAuto) {
+                autoGenerateIndirectAdminEntries();
+            }
+
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+
+            rows.forEach(row => {
+                // Skip auto-generated entries (they handle their own hours)
+                if (row.classList.contains('auto-indirect-entry') || row.classList.contains('auto-admin-entry')) {
+                    return;
+                }
+
+                // Find time inputs
+                const inputs = row.querySelectorAll('input[type="time"]');
+                const startInput = inputs[0];
+                const endInput = inputs[1];
+
+                const start = startInput?.value;
+                const end = endInput?.value;
+
+                const duration = calculateDuration(start, end);
+                const units = roundToUnits(duration);
+                const hours = unitsToHours(units);
+
+                row.querySelector('.duration-cell').textContent = duration;
+                row.querySelector('.units-cell').textContent = units;
+                row.querySelector('.hours-cell').textContent = hours.toFixed(2);
+
+                // Update fee code display
+                const categorySelect = row.querySelector('select');
+                if (categorySelect) {
+                    updateFeeCode(categorySelect);
+                }
+            });
+
+            updateDailySummary();
+            updateMonthlySummary();
+            runValidationChecks();
+        }
+
+        // Update daily summary
+        function updateDailySummary() {
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+            const dailyData = {};
+
+            // First pass: collect all hours by date and category
+            rows.forEach(row => {
+                const date = row.querySelector('input[type="date"]')?.value;
+                const categorySelect = row.querySelector('select');
+                const categoryKey = categorySelect?.value;
+                const hours = parseFloat(row.querySelector('.hours-cell')?.textContent) || 0;
+                const isAutoEntry = row.classList.contains('auto-indirect-entry') || row.classList.contains('auto-admin-entry');
+
+                if (date && categoryKey && hours > 0) {
+                    const key = date + '|' + categoryKey;
+                    if (!dailyData[key]) {
+                        dailyData[key] = {
+                            date: date,
+                            category: categoryKey,
+                            hours: 0,
+                            isAutoCalculated: isAutoEntry
+                        };
+                    }
+                    dailyData[key].hours += hours;
+                }
+            });
+
+            // Auto-calculate max allowed for indirect and admin if toggle is on
+            // Note: Auto-generated entries are already at max, so we only validate manual entries
+            const autoCalc = document.getElementById('autoCalculateToggle')?.checked || false;
+            if (autoCalc) {
+                // Group by date
+                const dateGroups = {};
+                Object.keys(dailyData).forEach(key => {
+                    const data = dailyData[key];
+                    if (!dateGroups[data.date]) {
+                        dateGroups[data.date] = {
+                            direct: 0,
+                            indirect: 0,
+                            admin: 0
+                        };
+                    }
+                    if (data.category === 'direct-in' || data.category === 'direct-out') {
+                        dateGroups[data.date].direct += data.hours;
+                    } else if (data.category === 'indirect') {
+                        dateGroups[data.date].indirect += data.hours;
+                    } else if (data.category === 'admin') {
+                        dateGroups[data.date].admin += data.hours;
+                    }
+                });
+
+                // Calculate max allowed for each date and cap manual entries
+                Object.keys(dateGroups).forEach(date => {
+                    const group = dateGroups[date];
+                    const totalDirect = group.direct;
+                    const maxIndirectAdmin = totalDirect * 0.25;
+                    const maxAdmin = totalDirect * 0.05;
+                    const maxIndirect = maxIndirectAdmin - maxAdmin;
+
+                    // Update indirect if manual entries exceed max
+                    const indirectKey = date + '|indirect';
+                    if (dailyData[indirectKey] && !dailyData[indirectKey].isAutoCalculated) {
+                        if (group.indirect > maxIndirect) {
+                            dailyData[indirectKey].hours = maxIndirect;
+                        }
+                    }
+
+                    // Update admin if manual entries exceed max
+                    const adminKey = date + '|admin';
+                    if (dailyData[adminKey] && !dailyData[adminKey].isAutoCalculated) {
+                        if (group.admin > maxAdmin) {
+                            dailyData[adminKey].hours = maxAdmin;
+                        }
+                    }
+                });
+            }
+
+            const tbody = document.getElementById('dailySummaryBody');
+            tbody.innerHTML = '';
+
+            // Sort by date
+            const sortedData = Object.values(dailyData).sort((a, b) => {
+                if (a.date === b.date) {
+                    const order = ['direct-in', 'direct-out', 'indirect', 'admin'];
+                    return order.indexOf(a.category) - order.indexOf(b.category);
+                }
+                return new Date(a.date) - new Date(b.date);
+            });
+
+            if (sortedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No entries yet. Add time entries above to see the daily summary.</td></tr>';
+                return;
+            }
+
+            sortedData.forEach(data => {
+                const cat = categories[data.category];
+                const amount = data.hours * cat.rate;
+                const autoIndicator = data.isAutoCalculated ? ' *' : '';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${formatDate(data.date)}</td>
+                    <td class="category-${data.category}">${cat.name}${autoIndicator}</td>
+                    <td><span class="code-badge code-${cat.code.toLowerCase()}">${cat.code}</span></td>
+                    <td>${data.hours.toFixed(2)}</td>
+                    <td>$${cat.rate}/hr</td>
+                    <td>$${amount.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Add note about auto-calculation
+            if (autoCalc) {
+                const noteRow = document.createElement('tr');
+                noteRow.innerHTML = `<td colspan="6" style="font-size: 11px; color: #5f6368; font-style: italic; padding-top: 8px;">* Indirect and Clinical Admin entries are automatically generated at max allowed (20% and 5% of direct care respectively). You can add notes to these entries below the table.</td>`;
+                tbody.appendChild(noteRow);
+            }
+        }
+
+        // Update monthly summary
+        function updateMonthlySummary() {
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+            const monthlyData = {};
+            const autoCalc = document.getElementById('autoCalculateToggle')?.checked || false;
+
+            Object.keys(categories).forEach(key => {
+                monthlyData[key] = { hours: 0, amount: 0 };
+            });
+
+            // First pass: collect all hours
+            rows.forEach(row => {
+                const categorySelect = row.querySelector('select');
+                const categoryKey = categorySelect?.value;
+                const hours = parseFloat(row.querySelector('.hours-cell')?.textContent) || 0;
+
+                if (categoryKey && hours > 0) {
+                    monthlyData[categoryKey].hours += hours;
+                    monthlyData[categoryKey].amount += hours * getRate(categoryKey);
+                }
+            });
+
+            // Apply auto-calculation if enabled
+            if (autoCalc) {
+                const totalDirect = monthlyData['direct-in'].hours + monthlyData['direct-out'].hours;
+                const maxIndirectAdmin = totalDirect * 0.25;
+                const maxAdmin = totalDirect * 0.05;
+                const maxIndirect = maxIndirectAdmin - maxAdmin;
+
+                // Recalculate indirect
+                if (monthlyData['indirect'].hours > maxIndirect) {
+                    monthlyData['indirect'].hours = maxIndirect;
+                    monthlyData['indirect'].amount = maxIndirect * 80;
+                }
+
+                // Recalculate admin
+                if (monthlyData['admin'].hours > maxAdmin) {
+                    monthlyData['admin'].hours = maxAdmin;
+                    monthlyData['admin'].amount = maxAdmin * 80;
+                }
+            }
+
+            const tbody = document.getElementById('monthlySummaryBody');
+            tbody.innerHTML = '';
+
+            let grandTotalHours = 0;
+            let grandTotalAmount = 0;
+
+            Object.keys(categories).forEach(key => {
+                const data = monthlyData[key];
+                if (data.hours > 0) {
+                    const cat = categories[key];
+                    grandTotalHours += data.hours;
+                    grandTotalAmount += data.amount;
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="category-${key}">${cat.name}</td>
+                        <td><span class="code-badge code-${cat.code.toLowerCase()}">${cat.code}</span></td>
+                        <td>${data.hours.toFixed(2)}</td>
+                        <td>$${cat.rate}/hr</td>
+                        <td>$${data.amount.toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+
+            const grandTotalDiv = document.getElementById('monthlyGrandTotal');
+            if (grandTotalHours > 0) {
+                grandTotalDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; font-size: 16px;">
+                        <span>Grand Total:</span>
+                        <span>${grandTotalHours.toFixed(2)} hours = $${grandTotalAmount.toFixed(2)}</span>
+                    </div>
+                `;
+            } else {
+                grandTotalDiv.innerHTML = 'No billable hours recorded yet.';
+            }
+        }
+
+        // Run validation checks
+        function runValidationChecks() {
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+            const validationDiv = document.getElementById('validationResults');
+            const warnings = [];
+            const info = [];
+
+            // Calculate totals by category
+            const totals = { direct: 0, indirect: 0, admin: 0, total: 0 };
+            const dailyTotals = {};
+
+            rows.forEach(row => {
+                const categorySelect = row.querySelector('select');
+                const categoryKey = categorySelect?.value;
+                const hours = parseFloat(row.querySelector('.hours-cell')?.textContent) || 0;
+                const date = row.querySelector('input[type="date"]')?.value;
+
+                if (categoryKey && hours > 0) {
+                    // Category totals
+                    if (categoryKey === 'direct-in' || categoryKey === 'direct-out') {
+                        totals.direct += hours;
+                    } else if (categoryKey === 'indirect') {
+                        totals.indirect += hours;
+                    } else if (categoryKey === 'admin') {
+                        totals.admin += hours;
+                    }
+                    totals.total += hours;
+
+                    // Daily totals
+                    if (!dailyTotals[date]) {
+                        dailyTotals[date] = 0;
+                    }
+                    dailyTotals[date] += hours;
+                }
+            });
+
+            // Check daily limits (14 hours max)
+            Object.keys(dailyTotals).forEach(date => {
+                if (dailyTotals[date] > 14) {
+                    warnings.push(`<strong>${formatDate(date)}:</strong> ${dailyTotals[date].toFixed(2)} hours exceeds daily limit of 14 hours`);
+                }
+            });
+
+            // Check 25% rule (indirect + admin should be max 25% of total)
+            if (totals.total > 0) {
+                const indirectAdminPercent = ((totals.indirect + totals.admin) / totals.total) * 100;
+                if (indirectAdminPercent > 25) {
+                    warnings.push(`Indirect + Clinical Admin (${indirectAdminPercent.toFixed(1)}%) exceeds 25% of total hours`);
+                }
+
+                // Check 5% rule (admin should be max 5% of direct + indirect)
+                const directIndirectTotal = totals.direct + totals.indirect;
+                if (directIndirectTotal > 0) {
+                    const adminPercent = (totals.admin / directIndirectTotal) * 100;
+                    if (adminPercent > 5) {
+                        warnings.push(`Clinical Admin (${adminPercent.toFixed(1)}%) exceeds 5% of Direct + Indirect Care hours`);
+                    }
+                }
+            }
+
+            // Monthly limit info (240 hours per 28 days)
+            if (totals.total > 240) {
+                warnings.push(`Total hours (${totals.total.toFixed(2)}) exceeds 240 hours per 28-day period`);
+            } else if (totals.total > 200) {
+                info.push(`Approaching monthly limit: ${totals.total.toFixed(2)} / 240 hours`);
+            }
+
+            // Render validation results
+            let html = '';
+
+            if (warnings.length > 0) {
+                html += '<div class="validation-warning">';
+                html += '<strong>Warnings:</strong><ul style="margin: 8px 0 0 20px;">';
+                warnings.forEach(w => html += `<li>${w}</li>`);
+                html += '</ul></div>';
+            } else {
+                html += '<div class="validation-info"><strong>✓</strong> All validation checks passed.</div>';
+            }
+
+            if (info.length > 0) {
+                html += '<div class="validation-info" style="margin-top: 8px;"><strong>Info:</strong><ul style="margin: 8px 0 0 20px;">';
+                info.forEach(i => html += `<li>${i}</li>`);
+                html += '</ul></div>';
+            }
+
+            validationDiv.innerHTML = html || '<div class="validation-info">Add time entries to run validation checks.</div>';
+        }
+
+        // Format date for display
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+            let csv = 'Date,Category,Fee Code,Start Time,End Time,Duration (min),15-min Units,Hours,Eligible Activities,Other Activities\n';
+
+            rows.forEach(row => {
+                const date = row.querySelector('input[type="date"]')?.value || '';
+                const categorySelect = row.querySelector('select');
+                const categoryName = categorySelect?.options[categorySelect.selectedIndex]?.text || '';
+                const feeCode = row.querySelector('.code-badge')?.textContent || '';
+                const inputs = row.querySelectorAll('input[type="time"]');
+                const startTime = inputs[0]?.value || '';
+                const endTime = inputs[1]?.value || '';
+                const duration = row.querySelector('.duration-cell')?.textContent || '0';
+                const units = row.querySelector('.units-cell')?.textContent || '0';
+                const hours = row.querySelector('.hours-cell')?.textContent || '0';
+
+                // Get notes if available (for indirect and admin categories)
+                const notes = getNotesForRow(row.id);
+                const eligibleActivities = notes.checkedActivities || '';
+                const otherActivities = notes.otherActivities || '';
+
+                // Escape quotes in text fields
+                const escapeCsv = (str) => str ? str.replace(/"/g, '""') : '';
+
+                csv += `"${escapeCsv(date)}","${escapeCsv(categoryName)}","${escapeCsv(feeCode)}","${escapeCsv(startTime)}","${escapeCsv(endTime)}",${duration},${units},${hours},"${escapeCsv(eligibleActivities)}","${escapeCsv(otherActivities)}"\n`;
+            });
+
+            // Create and download file
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `FHO_Plus_Tracker_${getTodayDate()}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Import from CSV
+        function importFromCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n');
+
+                // Skip header row and empty rows
+                let importedCount = 0;
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    // Parse CSV line (handling quoted values)
+                    const parts = parseCSVLine(line);
+                    if (parts.length >= 5) {
+                        const date = parts[0];
+                        const categoryName = parts[1];
+                        const startTime = parts[3];
+                        const endTime = parts[4];
+
+                        // Parse notes (columns 8 and 9)
+                        let notes = {};
+                        if (parts.length >= 10) {
+                            const eligibleActivities = parts[8] || '';
+                            const otherActivities = parts[9] || '';
+                            if (eligibleActivities || otherActivities) {
+                                notes = {
+                                    checkedActivities: eligibleActivities,
+                                    otherActivities: otherActivities
+                                };
+                            }
+                        }
+
+                        // Map category name to category key
+                        let categoryKey = '';
+                        if (categoryName.includes('Direct Care (In Office)')) {
+                            categoryKey = 'direct-in';
+                        } else if (categoryName.includes('Direct Care (Out of Office)')) {
+                            categoryKey = 'direct-out';
+                        } else if (categoryName.includes('Indirect')) {
+                            categoryKey = 'indirect';
+                        } else if (categoryName.includes('Clinical Admin')) {
+                            categoryKey = 'admin';
+                        }
+
+                        if (categoryKey && date && startTime && endTime) {
+                            addTimeEntry(date, categoryKey, startTime, endTime, notes, true);
+                            importedCount++;
+                        }
+                    }
+                }
+
+                alert(`Successfully imported ${importedCount} entries from CSV.`);
+
+                // Clear the file input
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        // Parse CSV line handling quoted values
+        function parseCSVLine(line) {
+            const parts = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    parts.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            parts.push(current.trim());
+            return parts;
+        }
+
+        // Clear all data with confirmation
+        function clearAllData() {
+            const tbody = document.getElementById('timeEntryBody');
+            const rowCount = tbody.querySelectorAll('tr').length;
+
+            if (rowCount === 0) {
+                alert('No data to clear.');
+                return;
+            }
+
+            const confirmClear = confirm(`Are you sure you want to clear all ${rowCount} time entries?\n\nThis action cannot be undone.`);
+            if (confirmClear) {
+                tbody.innerHTML = '';
+                updateCalculations();
+            }
+        }
+
+        // Duplicate functionality
+        let selectedDuplicateOption = 'day';
+
+        function openDuplicateModal() {
+            const modal = document.getElementById('duplicateModal');
+
+            // Set default dates
+            const today = getTodayDate();
+            document.getElementById('duplicateSourceDate').value = today;
+            document.getElementById('duplicateTargetDate').value = today;
+
+            // Calculate next week's Monday
+            const todayDate = new Date(today);
+            const nextMonday = getNextMonday(todayDate);
+            document.getElementById('duplicateSourceWeek').value = getMondayOfWeek(todayDate);
+            document.getElementById('duplicateTargetWeek').value = nextMonday;
+
+            // Select day option by default
+            selectDuplicateOption('day');
+
+            // Show modal
+            modal.classList.add('active');
+
+            // Update preview
+            updatePreview();
+        }
+
+        function closeDuplicateModal() {
+            document.getElementById('duplicateModal').classList.remove('active');
+        }
+
+        function selectDuplicateOption(option) {
+            selectedDuplicateOption = option;
+
+            // Update visual selection
+            document.querySelectorAll('.duplicate-option').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.getElementById('option-' + option).classList.add('selected');
+
+            // Show/hide appropriate options
+            document.getElementById('dayOptions').style.display = option === 'day' ? 'block' : 'none';
+            document.getElementById('weekOptions').style.display = option === 'week' ? 'block' : 'none';
+
+            // Update preview
+            updatePreview();
+        }
+
+        // Get the Monday of the week for a given date
+        function getMondayOfWeek(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            d.setDate(diff);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const dayStr = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${dayStr}`;
+        }
+
+        // Get the next Monday from a given date
+        function getNextMonday(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() + (day === 0 ? 1 : 8 - day);
+            d.setDate(diff);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const dayStr = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${dayStr}`;
+        }
+
+        // Get array of dates for a week starting from Monday
+        function getWeekDates(startMonday) {
+            const dates = [];
+            const monday = new Date(startMonday);
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const dayStr = String(d.getDate()).padStart(2, '0');
+                dates.push(`${year}-${month}-${dayStr}`);
+            }
+            return dates;
+        }
+
+        function updatePreview() {
+            const previewDiv = document.getElementById('duplicatePreview');
+            const previewText = document.getElementById('duplicatePreviewText');
+
+            if (selectedDuplicateOption === 'day') {
+                updateDayPreview(previewDiv, previewText);
+            } else {
+                updateWeekPreview(previewDiv, previewText);
+            }
+        }
+
+        function updateDayPreview(previewDiv, previewText) {
+            const sourceDate = document.getElementById('duplicateSourceDate').value;
+            const targetDate = document.getElementById('duplicateTargetDate').value;
+
+            if (!sourceDate || !targetDate) {
+                previewDiv.style.display = 'none';
+                return;
+            }
+
+            // Find entries for source date (excluding notes rows)
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+            const entriesToDuplicate = [];
+
+            rows.forEach(row => {
+                const date = row.querySelector('input[type="date"]')?.value;
+                if (date === sourceDate) {
+                    const categorySelect = row.querySelector('select');
+                    const category = categorySelect?.value;
+                    const inputs = row.querySelectorAll('input[type="time"]');
+                    const startTime = inputs[0]?.value;
+                    const endTime = inputs[1]?.value;
+
+                    if (category && startTime && endTime) {
+                        entriesToDuplicate.push({
+                            category: category,
+                            startTime: startTime,
+                            endTime: endTime
+                        });
+                    }
+                }
+            });
+
+            if (entriesToDuplicate.length === 0) {
+                previewText.textContent = `No entries found for ${formatDate(sourceDate)}`;
+                previewDiv.style.display = 'block';
+                previewDiv.style.background = '#fce8e6';
+                return;
+            }
+
+            previewDiv.style.display = 'block';
+            previewDiv.style.background = '#e8f0fe';
+
+            previewText.innerHTML = `
+                <span style="color: #5f6368;">${entriesToDuplicate.length} entries from ${formatDate(sourceDate)} will be duplicated to ${formatDate(targetDate)}</span>
+            `;
+        }
+
+        function updateWeekPreview(previewDiv, previewText) {
+            const sourceWeek = document.getElementById('duplicateSourceWeek').value;
+            const targetWeek = document.getElementById('duplicateTargetWeek').value;
+
+            if (!sourceWeek || !targetWeek) {
+                previewDiv.style.display = 'none';
+                return;
+            }
+
+            const sourceDates = getWeekDates(sourceWeek);
+            const targetDates = getWeekDates(targetWeek);
+
+            // Count entries for each day in the source week (excluding notes rows)
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+            const dayEntryCounts = {};
+
+            sourceDates.forEach(date => {
+                dayEntryCounts[date] = 0;
+            });
+
+            let totalEntries = 0;
+            rows.forEach(row => {
+                const date = row.querySelector('input[type="date"]')?.value;
+                if (sourceDates.includes(date)) {
+                    const categorySelect = row.querySelector('select');
+                    const category = categorySelect?.value;
+                    const inputs = row.querySelectorAll('input[type="time"]');
+                    const startTime = inputs[0]?.value;
+                    const endTime = inputs[1]?.value;
+
+                    if (category && startTime && endTime) {
+                        dayEntryCounts[date]++;
+                        totalEntries++;
+                    }
+                }
+            });
+
+            if (totalEntries === 0) {
+                previewText.textContent = `No entries found for the week of ${formatDate(sourceWeek)}`;
+                previewDiv.style.display = 'block';
+                previewDiv.style.background = '#fce8e6';
+                return;
+            }
+
+            previewDiv.style.display = 'block';
+            previewDiv.style.background = '#e8f0fe';
+
+            // Count days with entries
+            const daysWithEntries = Object.values(dayEntryCounts).filter(count => count > 0).length;
+
+            previewText.innerHTML = `
+                <span style="color: #5f6368;">${totalEntries} entries from ${daysWithEntries} day(s) in the week of ${formatDate(sourceWeek)} will be duplicated to the week of ${formatDate(targetWeek)}</span>
+            `;
+        }
+
+        function duplicateEntries() {
+            if (selectedDuplicateOption === 'day') {
+                duplicateDayEntries();
+            } else {
+                duplicateWeekEntries();
+            }
+        }
+
+        function duplicateDayEntries() {
+            const sourceDate = document.getElementById('duplicateSourceDate').value;
+            const targetDate = document.getElementById('duplicateTargetDate').value;
+
+            if (!sourceDate || !targetDate) {
+                alert('Please select both source and target dates.');
+                return;
+            }
+
+            if (sourceDate === targetDate) {
+                alert('Source and target dates must be different.');
+                return;
+            }
+
+            // Find entries for source date (excluding notes rows)
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+            const entriesToDuplicate = [];
+
+            rows.forEach(row => {
+                const date = row.querySelector('input[type="date"]')?.value;
+                if (date === sourceDate) {
+                    const categorySelect = row.querySelector('select');
+                    const category = categorySelect?.value;
+                    const inputs = row.querySelectorAll('input[type="time"]');
+                    const startTime = inputs[0]?.value;
+                    const endTime = inputs[1]?.value;
+
+                    if (category && startTime && endTime) {
+                        entriesToDuplicate.push({
+                            category: category,
+                            startTime: startTime,
+                            endTime: endTime
+                        });
+                    }
+                }
+            });
+
+            if (entriesToDuplicate.length === 0) {
+                alert(`No entries found for ${formatDate(sourceDate)}. Please select a date with existing entries.`);
+                return;
+            }
+
+            // Add duplicated entries — suppress auto-generation during bulk add
+            entriesToDuplicate.forEach(entry => {
+                addTimeEntry(targetDate, entry.category, entry.startTime, entry.endTime, {}, true);
+            });
+
+            // Close modal and show success
+            closeDuplicateModal();
+            alert(`Successfully duplicated ${entriesToDuplicate.length} entries to ${formatDate(targetDate)}.`);
+
+            // Scroll to the new entries
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        function duplicateWeekEntries() {
+            const sourceWeek = document.getElementById('duplicateSourceWeek').value;
+            const targetWeek = document.getElementById('duplicateTargetWeek').value;
+
+            if (!sourceWeek || !targetWeek) {
+                alert('Please select both source and target weeks.');
+                return;
+            }
+
+            if (sourceWeek === targetWeek) {
+                alert('Source and target weeks must be different.');
+                return;
+            }
+
+            const sourceDates = getWeekDates(sourceWeek);
+            const targetDates = getWeekDates(targetWeek);
+
+            // Find all entries in the source week (excluding notes rows)
+            const rows = document.querySelectorAll('#timeEntryBody tr:not(.notes-row)');
+            const entriesToDuplicate = [];
+
+            rows.forEach(row => {
+                const date = row.querySelector('input[type="date"]')?.value;
+                const sourceIndex = sourceDates.indexOf(date);
+
+                if (sourceIndex !== -1) {
+                    const categorySelect = row.querySelector('select');
+                    const category = categorySelect?.value;
+                    const inputs = row.querySelectorAll('input[type="time"]');
+                    const startTime = inputs[0]?.value;
+                    const endTime = inputs[1]?.value;
+
+                    if (category && startTime && endTime) {
+                        entriesToDuplicate.push({
+                            sourceDate: date,
+                            targetDate: targetDates[sourceIndex],
+                            category: category,
+                            startTime: startTime,
+                            endTime: endTime
+                        });
+                    }
+                }
+            });
+
+            if (entriesToDuplicate.length === 0) {
+                alert(`No entries found for the week of ${formatDate(sourceWeek)}. Please select a week with existing entries.`);
+                return;
+            }
+
+            // Add duplicated entries — suppress auto-generation during bulk add
+            entriesToDuplicate.forEach(entry => {
+                addTimeEntry(entry.targetDate, entry.category, entry.startTime, entry.endTime, {}, true);
+            });
+
+            // Close modal and show success
+            closeDuplicateModal();
+            const daysWithEntries = [...new Set(entriesToDuplicate.map(e => e.targetDate))].length;
+            alert(`Successfully duplicated ${entriesToDuplicate.length} entries to ${daysWithEntries} day(s) in the week of ${formatDate(targetWeek)}.`);
+
+            // Scroll to the new entries
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        // Close duplicate modal when clicking outside
+        document.getElementById('duplicateModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDuplicateModal();
+            }
+        });
+
+        // Add event listeners for date inputs
+        document.getElementById('duplicateSourceDate').addEventListener('change', updatePreview);
+        document.getElementById('duplicateTargetDate').addEventListener('change', updatePreview);
+        document.getElementById('duplicateSourceWeek').addEventListener('change', updatePreview);
+        document.getElementById('duplicateTargetWeek').addEventListener('change', updatePreview);
+
+        // Initialize with sample data
+        function initSampleData() {
+            // Add sample entries — suppress auto-generation during bulk load
+            const today = getTodayDate();
+            addTimeEntry(today, 'direct-in', '09:00', '12:00', {}, true);
+            addTimeEntry(today, 'direct-in', '13:00', '15:30', {}, true);
+            addTimeEntry(today, 'indirect', '15:30', '17:00', {}, true);
+            addTimeEntry(today, 'admin', '17:00', '17:30', {}, true);
+
+            // Add another day
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+            addTimeEntry(yesterdayStr, 'direct-in', '09:00', '13:00', {}, true);
+            addTimeEntry(yesterdayStr, 'indirect', '14:00', '16:00', {}, true);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // No sample data — start blank
+        });
+    </script>
+</body>
+</html>
