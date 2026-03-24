@@ -952,6 +952,7 @@
                             <th>Category</th>
                             <th>Fee Code</th>
                             <th>Total Hours</th>
+                            <th>Total Units</th>
                             <th>Rate</th>
                             <th>Amount</th>
                         </tr>
@@ -972,6 +973,7 @@
                             <th>Category</th>
                             <th>Fee Code</th>
                             <th>Total Hours</th>
+                            <th>Total Units</th>
                             <th>Rate</th>
                             <th>Total Amount</th>
                         </tr>
@@ -1884,7 +1886,7 @@
             });
 
             if (sortedData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No entries yet. Add time entries above to see the daily summary.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">No entries yet. Add time entries above to see the daily summary.</td></tr>';
                 return;
             }
 
@@ -1899,6 +1901,7 @@
                     <td class="category-${data.category}">${cat.name}${autoIndicator}</td>
                     <td><span class="code-badge code-${cat.code.toLowerCase()}">${cat.code}</span></td>
                     <td>${data.hours.toFixed(2)}</td>
+                    <td>${roundToUnits(data.hours * 60)}</td>
                     <td>$${cat.rate}/hr</td>
                     <td>$${amount.toFixed(2)}</td>
                 `;
@@ -1908,7 +1911,7 @@
             // Add note about auto-calculation
             if (autoCalc) {
                 const noteRow = document.createElement('tr');
-                noteRow.innerHTML = `<td colspan="6" style="font-size: 11px; color: #5f6368; font-style: italic; padding-top: 8px;">* Indirect and Clinical Admin entries are automatically generated at max allowed (20% and 5% of direct care respectively). You can add notes to these entries below the table.</td>`;
+                noteRow.innerHTML = `<td colspan="7" style="font-size: 11px; color: #5f6368; font-style: italic; padding-top: 8px;">* Indirect and Clinical Admin entries are automatically generated at max allowed (20% and 5% of direct care respectively). You can add notes to these entries below the table.</td>`;
                 tbody.appendChild(noteRow);
             }
         }
@@ -1959,6 +1962,7 @@
             tbody.innerHTML = '';
 
             let grandTotalHours = 0;
+            let grandTotalUnits = 0;
             let grandTotalAmount = 0;
 
             Object.keys(categories).forEach(key => {
@@ -1966,6 +1970,7 @@
                 if (data.hours > 0) {
                     const cat = categories[key];
                     grandTotalHours += data.hours;
+                    grandTotalUnits += roundToUnits(data.hours * 60);
                     grandTotalAmount += data.amount;
 
                     const row = document.createElement('tr');
@@ -1973,6 +1978,7 @@
                         <td class="category-${key}">${cat.name}</td>
                         <td><span class="code-badge code-${cat.code.toLowerCase()}">${cat.code}</span></td>
                         <td>${data.hours.toFixed(2)}</td>
+                        <td>${roundToUnits(data.hours * 60)}</td>
                         <td>$${cat.rate}/hr</td>
                         <td>$${data.amount.toFixed(2)}</td>
                     `;
@@ -1985,7 +1991,7 @@
                 grandTotalDiv.innerHTML = `
                     <div style="display: flex; justify-content: space-between; font-size: 16px;">
                         <span>Grand Total:</span>
-                        <span>${grandTotalHours.toFixed(2)} hours = $${grandTotalAmount.toFixed(2)}</span>
+                        <span>${grandTotalHours.toFixed(2)} hrs | ${grandTotalUnits} units = $${grandTotalAmount.toFixed(2)}</span>
                     </div>
                 `;
             } else {
