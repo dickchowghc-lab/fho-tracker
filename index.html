@@ -890,6 +890,17 @@
             </label>
         </div>
 
+        <div class="toggle-container">
+            <div class="toggle-label">
+                Include Clinical Administration
+                <span>When enabled, Clinical Admin hours are auto-calculated (5% of direct care). When disabled, only Indirect Patient Care is auto-calculated (up to 25% of total hours).</span>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="includeAdminToggle" checked onchange="toggleAutoCalculate()">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
         <div class="instructions">
             <h2>How to Use This Template</h2>
             <ol>
@@ -1574,8 +1585,11 @@
                 const minHoursToShow = 0.01; // Any positive hours
 
                 if (directHours >= minHoursToShow) {
-                    const maxIndirect = directHours * 0.20; // 20% of direct care
-                    const maxAdmin = directHours * 0.05; // 5% of direct care
+                    // 25% of TOTAL hours for indirect + admin means (I+A)/T = 0.25 → I+A = D/3
+                    const includeAdmin = document.getElementById('includeAdminToggle')?.checked ?? true;
+                    const maxIndirectAdmin = directHours / 3; // combined max pool
+                    const maxAdmin = includeAdmin ? directHours * 0.05 : 0; // 5% of direct care, or 0 if disabled
+                    const maxIndirect = maxIndirectAdmin - maxAdmin; // remainder goes to indirect
 
                     // Check if manual entries already exist for this date
                     const hasManualIndirect = existingIndirectAdmin[date]?.indirect;
@@ -1594,10 +1608,13 @@
                             // Create new auto entry
                             addAutoTimeEntry(date, 'indirect', maxIndirect);
                         }
+                    } else {
+                        // Manual indirect exists — delete any auto-indirect entry for this date
+                        if (existingAutoIndirect) deleteRow(existingAutoIndirect.id);
                     }
 
-                    // Add or update admin entry
-                    if (!hasManualAdmin) {
+                    // Add or update admin entry (only if includeAdmin is enabled)
+                    if (includeAdmin && !hasManualAdmin) {
                         if (existingAutoAdmin) {
                             // Update existing auto entry
                             updateAutoEntryHours(existingAutoAdmin, maxAdmin);
@@ -1605,6 +1622,12 @@
                             // Create new auto entry
                             addAutoTimeEntry(date, 'admin', maxAdmin);
                         }
+                    } else if (!includeAdmin && existingAutoAdmin) {
+                        // Admin disabled — delete any auto-admin entry
+                        deleteRow(existingAutoAdmin.id);
+                    } else if (hasManualAdmin && existingAutoAdmin) {
+                        // Manual admin exists — delete auto-admin entry
+                        deleteRow(existingAutoAdmin.id);
                     }
                 }
             });
@@ -1848,11 +1871,13 @@
                 });
 
                 // Calculate max allowed for each date and cap manual entries
+                const includeAdmin = document.getElementById('includeAdminToggle')?.checked ?? true;
                 Object.keys(dateGroups).forEach(date => {
                     const group = dateGroups[date];
                     const totalDirect = group.direct;
-                    const maxIndirectAdmin = totalDirect * 0.25;
-                    const maxAdmin = totalDirect * 0.05;
+                    // 25% of TOTAL hours for indirect + admin means (I+A)/T = 0.25 → I+A = D/3
+                    const maxIndirectAdmin = totalDirect / 3;
+                    const maxAdmin = includeAdmin ? totalDirect * 0.05 : 0; // 5% of direct care, or 0 if disabled
                     const maxIndirect = maxIndirectAdmin - maxAdmin;
 
                     // Update indirect if manual entries exceed max
@@ -1863,11 +1888,13 @@
                         }
                     }
 
-                    // Update admin if manual entries exceed max
-                    const adminKey = date + '|admin';
-                    if (dailyData[adminKey] && !dailyData[adminKey].isAutoCalculated) {
-                        if (group.admin > maxAdmin) {
-                            dailyData[adminKey].hours = maxAdmin;
+                    // Update admin if manual entries exceed max (only if admin is included)
+                    if (includeAdmin) {
+                        const adminKey = date + '|admin';
+                        if (dailyData[adminKey] && !dailyData[adminKey].isAutoCalculated) {
+                            if (group.admin > maxAdmin) {
+                                dailyData[adminKey].hours = maxAdmin;
+                            }
                         }
                     }
                 });
@@ -1940,9 +1967,11 @@
 
             // Apply auto-calculation if enabled
             if (autoCalc) {
+                const includeAdmin = document.getElementById('includeAdminToggle')?.checked ?? true;
                 const totalDirect = monthlyData['direct-in'].hours + monthlyData['direct-out'].hours;
-                const maxIndirectAdmin = totalDirect * 0.25;
-                const maxAdmin = totalDirect * 0.05;
+                // 25% of TOTAL hours for indirect + admin means (I+A)/T = 0.25 → I+A = D/3
+                const maxIndirectAdmin = totalDirect / 3;
+                const maxAdmin = includeAdmin ? totalDirect * 0.05 : 0; // 5% of direct care, or 0 if disabled
                 const maxIndirect = maxIndirectAdmin - maxAdmin;
 
                 // Recalculate indirect
@@ -2049,12 +2078,15 @@
                     warnings.push(`Indirect + Clinical Admin (${indirectAdminPercent.toFixed(1)}%) exceeds 25% of total hours`);
                 }
 
-                // Check 5% rule (admin should be max 5% of direct + indirect)
-                const directIndirectTotal = totals.direct + totals.indirect;
-                if (directIndirectTotal > 0) {
-                    const adminPercent = (totals.admin / directIndirectTotal) * 100;
-                    if (adminPercent > 5) {
-                        warnings.push(`Clinical Admin (${adminPercent.toFixed(1)}%) exceeds 5% of Direct + Indirect Care hours`);
+                // Check 5% rule (admin should be max 5% of direct + indirect) — only if admin is included
+                const includeAdmin = document.getElementById('includeAdminToggle')?.checked ?? true;
+                if (includeAdmin) {
+                    const directIndirectTotal = totals.direct + totals.indirect;
+                    if (directIndirectTotal > 0) {
+                        const adminPercent = (totals.admin / directIndirectTotal) * 100;
+                        if (adminPercent > 5) {
+                            warnings.push(`Clinical Admin (${adminPercent.toFixed(1)}%) exceeds 5% of Direct + Indirect Care hours`);
+                        }
                     }
                 }
             }
